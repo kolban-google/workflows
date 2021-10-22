@@ -43,8 +43,8 @@ class MyJointJS extends React.Component {
             openSave: false,
             saveText: "",
             loadText: "",
-            settingsShowDialog: false,
-            contextShowMenu: false,
+            settings: false,
+            contextMenuOpen: false,
             mouseX: 0,
             mouseY: 0,
             menuElement: null,
@@ -124,18 +124,9 @@ class MyJointJS extends React.Component {
         rect.addPort({ group: 'in' });
         rect.addTo(this.graph);
         rect.set("wf-stepName", "stepName1");
-        rect.set("wf", {
-            "StepX": {
-                "call": "None"
-            }
-        });
-
-        /**
-         * Add a handler for the context menu.
-         */
         this.paper.findViewByModel(rect).on('element:contextmenu', (a, b, c, d, e) => {
             this.setState({
-                contextShowMenu: true,
+                contextMenuOpen: true,
                 mouseX: event.clientX,
                 mouseY: event.clientY,
                 menuElement: rect,
@@ -145,7 +136,7 @@ class MyJointJS extends React.Component {
     }
 
     _menuClose() {
-        this.setState({ contextShowMenu: false });
+        this.setState({ contextMenuOpen: false });
     }
 
     _deleteElement() {
@@ -156,7 +147,7 @@ class MyJointJS extends React.Component {
     _settingsClose() {
         this.state.menuElement.set("wf-stepName", this.state.stepName);
         this.state.menuElement.attr("label/text", this.state.stepName);
-        this.setState({ settingsShowDialog: false });
+        this.setState({ settings: false });
         this._menuClose();
     }
 
@@ -164,21 +155,7 @@ class MyJointJS extends React.Component {
         this.type = event.target.value
     }
 
-    _dumpElement() {
-        console.dir(this.state.menuElement.get('wf'));
-    }
-
     render() {
-        let wf = {
-            "step1": {
-                "call": "myFunc",
-                args: {
-                    "a1": "v1",
-                    "a2": "v2"
-                },
-                result: "resultVar"
-            }
-        }
         return (<div>
             <div ref={el => this.el = el}></div>
             <Button variant="contained" onClick={() => {
@@ -226,7 +203,7 @@ class MyJointJS extends React.Component {
                 id="simple-menu"
                 keepMounted
                 anchorReference='anchorPosition'
-                open={this.state.contextShowMenu}
+                open={this.state.contextMenuOpen}
                 anchorPosition={
                     this.state.mouseY !== null && this.state.mouseX !== null
                         ? { top: this.state.mouseY, left: this.state.mouseX }
@@ -234,16 +211,39 @@ class MyJointJS extends React.Component {
                 }
                 MenuListProps={{ onMouseLeave: () => this._menuClose() }}
             >
-                <MenuItem onClick={() => this.setState({ settingsShowDialog: true })}>Settings</MenuItem>
+                <MenuItem onClick={() => this.setState({ settings: true })}>Settings</MenuItem>
                 <MenuItem onClick={() => this._deleteElement()}>Delete</MenuItem>
-                <MenuItem onClick={this._dumpElement.bind(this)}>Dump</MenuItem>
             </Menu>
 
             {/* SETTINGS */}
-            <Dialog open={this.state.settingsShowDialog} fullWidth>
+            <Dialog open={this.state.settings} fullWidth>
                 <DialogTitle>Step Settings</DialogTitle>
                 <DialogContent>
-                    <Settings wf={this.state.menuElement?this.state.menuElement.get("wf"):null}/>
+                    <Input type='text' value={this.state.stepName}
+                        onChange={
+                            (e) => {
+                                this.setState({ stepName: e.target.value })
+                            }
+                        }
+                    ></Input>
+                    <InputLabel id="type-select-label">Type</InputLabel>
+                    <Select labelId="type-select-label" value={this.state.type} onChange={
+                        (e) => {
+                            this.setState({ type: e.target.value })
+                        }
+                    }>
+                        <MenuItem value={"call"}>Call</MenuItem>
+                        <MenuItem value={"assign"}>Assign</MenuItem>
+                        <MenuItem value={"switch"}>Switch</MenuItem>
+                    </Select>
+                    {this.state.type === "call" ?
+                        <div>
+                            <TextField value={this.state.result}
+                                onChange={() => { }} />
+                            <NameValueList items={this.state.items} />
+                        </div> : null}
+                    {this.state.type === "assign" ?
+                        <div>Hi!! assign</div> : null}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => {
@@ -254,7 +254,7 @@ class MyJointJS extends React.Component {
                     }} color="primary">Close</Button>
                 </DialogActions>
             </Dialog>
-            <Settings wf={wf}></Settings>
+            <NameValueList items={this.state.items} />
         </div>);
     }
 }
