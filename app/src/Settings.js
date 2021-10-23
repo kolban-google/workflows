@@ -1,10 +1,10 @@
 import React from 'react';
-import Input from '@material-ui/core/Input';
 import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
-import InputLabel from '@material-ui/core/InputLabel';
 import TextField from '@material-ui/core/TextField';
 import NameValueList from "./NameValueList.js"
+import Grid from '@material-ui/core/Grid';
+import PropTypes from 'prop-types';
+
 
 /**
  * <Settings wf=<Object>/>
@@ -13,25 +13,19 @@ import NameValueList from "./NameValueList.js"
  */
 class Settings extends React.Component {
 
+    /**
+     * 
+     * @param {*} props 
+     * 
+     * wf: object
+     */
     constructor(props) {
         super(props);
-        /*
-        this.state = {
-            stepName: "",
-            type: "call",
-            result: "",
-            items: [
-                { name: 'First Item', value: "v1" },
-                { name: 'Second Item', value: "v2" },
-                { name: 'Third Item', value: "v13" }
-            ]
-        }
-        */
         if (props.wf) {
             this.state = this.parseWF(props.wf);
             delete this.parseFailed;
         } else {
-            console.error("!Expected  a wf object in Settings");
+            console.error("!Expected a wf object in Settings");
             this.parseFailed = true;
         }
     }
@@ -68,7 +62,7 @@ class Settings extends React.Component {
         if (step.hasOwnProperty("call")) {
             // It is a call
             let functionName = step.call;
-            let result = step.result;
+            let result = step.result ? step.result : "";
             let type = "call";
             let items = [];
             if (step.args) {
@@ -113,36 +107,57 @@ class Settings extends React.Component {
         return wf;
     }
 
+    _settingsChanged() {
+        this.props.onChange(this.toWF());
+    }
+
     render() {
         if (this.parseFailed) {
             return <div>PARSE FAILED</div>
         }
         return (
             <div>
-                <Input type='text' value={this.state.stepName}
-                    onChange={
-                        (e) => {
-                            this.setState({ stepName: e.target.value })
-                        }
-                    }
-                ></Input>
-                <InputLabel id="type-select-label">Type</InputLabel>
-                <Select labelId="type-select-label" value={this.state.type} onChange={
-                    (e) => {
-                        this._typeChange(e.target.value)
-                    }
-                }>
-                    <MenuItem value={"call"}>Call</MenuItem>
-                    <MenuItem value={"assign"}>Assign</MenuItem>
-                    <MenuItem value={"switch"}>Switch</MenuItem>
-                </Select>
+                <Grid container spacing={3}>
+                    <Grid item xs={6}>
+                        <TextField label='Step Name' value={this.state.stepName}
+                            onChange={
+                                (e) => {
+                                    this.setState({ stepName: e.target.value }, this._settingsChanged)
+                                }
+                            }
+                        ></TextField>
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField label="type" value={this.state.type} select onChange={
+                            (e) => {
+                                this._typeChange(e.target.value)
+                            }
+                        }>
+                            <MenuItem value={"call"}>Call</MenuItem>
+                            <MenuItem value={"assign"}>Assign</MenuItem>
+                            <MenuItem value={"switch"}>Switch</MenuItem>
+                        </TextField>
+                    </Grid>
+                </Grid>
                 {this.state.type === "call" ?
-                    <div>
-                        <TextField value={this.state.functionName} />
-                        <TextField value={this.state.result}
-                            onChange={() => { }} />
-                        <NameValueList items={this.state.items} />
-                    </div> : null}
+                    <Grid container spacing={3}>
+                        <Grid item xs={12}>
+                            <TextField value={this.state.functionName} label="Function Name" fullWidth
+                                onChange={(e) => {
+                                    this.setState({ functionName: e.target.value }, this._settingsChanged);
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField value={this.state.result} label="Result" fullWidth
+                                onChange={(e) => {
+                                    this.setState({ result: e.target.value }, this._settingsChanged);
+                                }} />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <NameValueList items={this.state.items} />
+                        </Grid>
+                    </Grid> : null}
                 {this.state.type === "assign" ?
                     <div>Hi!! assign
                         <NameValueList items={this.state.items} />
@@ -151,5 +166,10 @@ class Settings extends React.Component {
             </div>);
     }
 }
+
+Settings.propTypes = {
+    wf: PropTypes.object.isRequired,
+    onChange: PropTypes.func.isRequired
+};
 
 export default Settings;

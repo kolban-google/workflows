@@ -1,9 +1,8 @@
 import React from 'react';
 import Button from '@material-ui/core/Button';
-import Input from '@material-ui/core/Input';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
-
+import TextField from '@material-ui/core/TextField';
 
 /**
  * Take as input an array of
@@ -91,9 +90,9 @@ class NameValueList extends React.Component {
                 <List>
                     {this.state.items.map((item, index) => (
                         <ListItem key={index} dense>
-                            <Input value={item.name} onChange={(e) => this._nameChange(e, index)}/>
+                            <TextField label="name" value={item.name} onChange={(e) => this._nameChange(e, index)}/>
                             &nbsp;
-                            <Input value={item.value} onChange={(e) => this._valueChange(e, index)}/>
+                            <TextField label="value" value={item.value} onChange={(e) => this._valueChange(e, index)}/>
                             <Button onClick={(e) => this._up(index)} disabled={index===0}>Up</Button>
                             <Button onClick={(e) => this._down(index)} disabled={index===(this.state.items.length-1)}>Down</Button>
                             <Button onClick={(e) => this._delete(index)}>Delete</Button>

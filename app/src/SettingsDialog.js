@@ -1,10 +1,11 @@
 import React from 'react';
-import Input from '@material-ui/core/Input';
-import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
-import InputLabel from '@material-ui/core/InputLabel';
-import TextField from '@material-ui/core/TextField';
-import NameValueList from "./NameValueList.js"
+import Button from '@material-ui/core/Button';
+import Dialog from '@material-ui/core/Dialog';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import Settings from "./Settings.js";
+import PropTypes from 'prop-types';
 
 /**
  * <SettingsDialog wf=<Object>/>
@@ -14,51 +15,48 @@ import NameValueList from "./NameValueList.js"
 class SettingsDialog extends React.Component {
 
     constructor(props) {
+        console.log("Settings Dialog created!");
+        // open: boolean
+        // onOk: func
+        // onCancel: func
+        // wf: object
         super(props);
+        this.state = {wf: props.wf};
     }
 
-    _typeChange(newType) {
-        // A new type means to clear all existing items.
-        this.setState({ type: newType, items: [] })
+    componentDidUpdate(prevProps) {
+        if (prevProps.wf !== this.props.wf) {
+            this.setState({wf: this.props.wf});
+        }
     }
-
-    /**
-     * Parse a WF object and return the core information.
-     * @param {*} wf 
-     * @returns 
-     * 
-     * Call
-     * {
-  <stepName>: {
-    "call": <functionName>,
-    "args": {
-      <arg1>: <value1>,
-      ...
-    },
-    "result": <varName>
-  }
-}
-     */
-   
 
     render() {
-
         return (
             <Dialog open={this.props.open} fullWidth>
                 <DialogTitle>Step Settings</DialogTitle>
                 <DialogContent>
-                    <Settings wf={this.props.wf}/>
+                    <Settings wf={this.props.wf} onChange={(wf) => {
+                        this.setState({wf: wf});
+                    }} />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => {
-                        this.props.onOk();
+                        this.props.onOk(this.state.wf);
                     }} color="primary">OK</Button>
                     <Button onClick={() => {
-                        this.props.onCancel();
+                        this.props.onCancel(this.wf);
                     }} color="primary">Cancel</Button>
                 </DialogActions>
             </Dialog>
         );
+    }
 }
+
+SettingsDialog.propTypes = {
+    open: PropTypes.bool.isRequired,
+    onOk: PropTypes.func.isRequired,
+    onCancel: PropTypes.func.isRequired,
+    wf: PropTypes.object.isRequired
+};
 
 export default SettingsDialog;

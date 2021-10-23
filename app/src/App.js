@@ -7,8 +7,6 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        Hello
-        <Button variant="contained">Click Me</Button>
         <MyJointJS></MyJointJS>
       </div>
     );

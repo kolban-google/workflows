@@ -2,17 +2,14 @@ import React from 'react';
 import * as joint from 'jointjs';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
 import Input from '@material-ui/core/Input';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
-import Select from '@material-ui/core/Select';
-import InputLabel from '@material-ui/core/InputLabel';
-import TextField from '@material-ui/core/TextField';
-import NameValueList from "./NameValueList.js"
-import Settings from "./Settings.js"
+import SettingsDialog from './SettingsDialog.js';
+import clone from 'just-clone';
+
+
+const WFShape_BaseColor = "#daecf2";
 
 const portsDef = {
     groups: {
@@ -33,6 +30,34 @@ const portsDef = {
     items: []
 };
 
+const WFRect = joint.dia.Element.define('standard.Rectangle', {
+    attrs: {
+        body: {
+            refWidth: '100%',
+            refHeight: '100%',
+            strokeWidth: 2,
+            stroke: '#000000',
+            fill: '#FFFFFF'
+        },
+        label: {
+            textVerticalAnchor: 'middle',
+            textAnchor: 'middle',
+            refX: '50%',
+            refY: '50%',
+            fontSize: 14,
+            fill: '#333333'
+        }
+    }
+}, {
+    markup: [{
+        tagName: 'rect',
+        selector: 'body',
+    }, {
+        tagName: 'text',
+        selector: 'label'
+    }]
+});
+
 class MyJointJS extends React.Component {
 
     constructor(props) {
@@ -43,19 +68,11 @@ class MyJointJS extends React.Component {
             openSave: false,
             saveText: "",
             loadText: "",
-            settingsShowDialog: false,
-            contextShowMenu: false,
-            mouseX: 0,
-            mouseY: 0,
+            settingsShowDialog: false, // Set to true to show the settings dialog.
+            contextShowMenu: false, // Set to true to show the context menu.
+            mouse: { x: 0, y: 0 },
             menuElement: null,
-            stepName: "",
-            type: "call",
-            result: "",
-            items: [
-                { name: 'First Item', value: "v1" },
-                { name: 'Second Item', value: "v2" },
-                { name: 'Third Item', value: "v13" }
-            ]
+            wf: {}
         }
     }
 
@@ -90,6 +107,7 @@ class MyJointJS extends React.Component {
                 return true;
             }
         });
+        /*
         let rect = new joint.shapes.standard.Rectangle();
         rect.position(100, 30);
         rect.resize(100, 40);
@@ -103,43 +121,48 @@ class MyJointJS extends React.Component {
             }
         });
         rect.addTo(this.graph);
+        */
     }
 
     _add() {
+        let stepName = "StepX";
+        /*
         let rect = new joint.shapes.standard.Rectangle({
+            ports: portsDef
+        });
+        */
+        let rect = new WFRect({
             ports: portsDef
         });
         rect.position(100, 30);
         rect.resize(100, 40);
         rect.attr({
             body: {
-                fill: 'green'
+                fill: WFShape_BaseColor
             },
             label: {
-                text: 'Hello',
-                fill: 'white'
+                text: stepName,
+                fill: 'black'
             }
         });
         rect.addPort({ group: 'out' });
         rect.addPort({ group: 'in' });
         rect.addTo(this.graph);
-        rect.set("wf-stepName", "stepName1");
         rect.set("wf", {
-            "StepX": {
-                "call": "None"
+            [stepName]: {
+                "call": "None" + new Date().toISOString()
             }
         });
 
         /**
          * Add a handler for the context menu.
          */
-        this.paper.findViewByModel(rect).on('element:contextmenu', (a, b, c, d, e) => {
+        this.paper.findViewByModel(rect).on('element:contextmenu', (e) => {
             this.setState({
                 contextShowMenu: true,
-                mouseX: event.clientX,
-                mouseY: event.clientY,
+                mouse: { x: e.clientX, y: e.clientY },
                 menuElement: rect,
-                stepName: rect.get("wf-stepName")
+                wf: clone(rect.get('wf'))
             });
         });
     }
@@ -153,15 +176,22 @@ class MyJointJS extends React.Component {
         this._menuClose();
     }
 
-    _settingsClose() {
-        this.state.menuElement.set("wf-stepName", this.state.stepName);
-        this.state.menuElement.attr("label/text", this.state.stepName);
+    _settingsOk(wf) {
+        let jjsElement = this.state.menuElement;
+        jjsElement.set("wf", wf);
+        let propertyNames = Object.getOwnPropertyNames(wf);
+        if (propertyNames > 1) {
+            console.error("Too many properties!");
+        }
+        let stepName = propertyNames[0];
         this.setState({ settingsShowDialog: false });
+        jjsElement.attr("label/text", stepName);
         this._menuClose();
     }
 
-    _settingsTypeChange(event) {
-        this.type = event.target.value
+    _settingsCancel(wf) {
+        this.setState({ settingsShowDialog: false });
+        this._menuClose();
     }
 
     _dumpElement() {
@@ -169,16 +199,6 @@ class MyJointJS extends React.Component {
     }
 
     render() {
-        let wf = {
-            "step1": {
-                "call": "myFunc",
-                args: {
-                    "a1": "v1",
-                    "a2": "v2"
-                },
-                result: "resultVar"
-            }
-        }
         return (<div>
             <div ref={el => this.el = el}></div>
             <Button variant="contained" onClick={() => {
@@ -227,34 +247,25 @@ class MyJointJS extends React.Component {
                 keepMounted
                 anchorReference='anchorPosition'
                 open={this.state.contextShowMenu}
-                anchorPosition={
-                    this.state.mouseY !== null && this.state.mouseX !== null
-                        ? { top: this.state.mouseY, left: this.state.mouseX }
-                        : undefined
-                }
+                anchorPosition={{
+                    top: this.state.mouse.y,
+                    left: this.state.mouse.x
+                }}
                 MenuListProps={{ onMouseLeave: () => this._menuClose() }}
             >
-                <MenuItem onClick={() => this.setState({ settingsShowDialog: true })}>Settings</MenuItem>
+                <MenuItem onClick={() => {
+                    this.setState({ settingsShowDialog: true });
+                }}>Settings</MenuItem>
                 <MenuItem onClick={() => this._deleteElement()}>Delete</MenuItem>
                 <MenuItem onClick={this._dumpElement.bind(this)}>Dump</MenuItem>
             </Menu>
 
             {/* SETTINGS */}
-            <Dialog open={this.state.settingsShowDialog} fullWidth>
-                <DialogTitle>Step Settings</DialogTitle>
-                <DialogContent>
-                    <Settings wf={this.state.menuElement?this.state.menuElement.get("wf"):null}/>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => {
-                        this._settingsClose()
-                    }} color="primary">OK</Button>
-                    <Button onClick={() => {
-                        this._settingsClose()
-                    }} color="primary">Close</Button>
-                </DialogActions>
-            </Dialog>
-            <Settings wf={wf}></Settings>
+            <SettingsDialog open={this.state.settingsShowDialog}
+                wf={this.state.wf}
+                onOk={this._settingsOk.bind(this)}
+                onCancel={this._settingsCancel.bind(this)}
+            />
         </div>);
     }
 }
