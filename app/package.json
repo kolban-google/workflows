@@ -4,7 +4,11 @@
   "private": true,
   "dependencies": {
     "@material-ui/core": "^4.12.3",
+    "@material-ui/icons": "^4.11.2",
+    "dagre": "^0.8.5",
+    "graphlib": "^2.1.8",
     "jointjs": "^3.4.4",
+    "js-yaml": "^4.1.0",
     "just-clone": "^4.0.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",

@@ -3,6 +3,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import TextField from '@material-ui/core/TextField';
 import NameValueList from "./NameValueList.js"
 import Grid from '@material-ui/core/Grid';
+import WFUtils from './WFUtils.js'
 import PropTypes from 'prop-types';
 
 
@@ -30,10 +31,7 @@ class Settings extends React.Component {
         }
     }
 
-    _typeChange(newType) {
-        // A new type means to clear all existing items.
-        this.setState({ type: newType, items: [] })
-    }
+
 
     /**
      * Parse a WF object and return the core information.
@@ -53,17 +51,25 @@ class Settings extends React.Component {
 }
      */
     parseWF(wf) {
-        let propertyNames = Object.getOwnPropertyNames(wf);
-        if (propertyNames > 1) {
-            console.error("Too many properties!");
-        }
-        let stepName = propertyNames[0];
+        let stepName = WFUtils.getStepName(wf);
         let step = wf[stepName];
-        if (step.hasOwnProperty("call")) {
+        const stepType = WFUtils.getStepType(wf);
+        /**
+         * {
+                <stepName>: {
+                    "call": <functionName>,
+                    "args": {
+                    <arg1>: <value1>,
+                    ...
+                    },
+                    "result": <varName>
+                }
+            }
+         */
+        if (stepType === "call") {
             // It is a call
             let functionName = step.call;
             let result = step.result ? step.result : "";
-            let type = "call";
             let items = [];
             if (step.args) {
                 Object.getOwnPropertyNames(step.args).forEach((propertyName) => {
@@ -74,12 +80,55 @@ class Settings extends React.Component {
                 });
             }
             return {
+                type: "call",
                 stepName,
                 functionName,
                 result,
-                type,
                 items
             };
+        }
+
+        /*
+        {
+            <stepName>: {
+                "assign": [
+                    {
+                        <varName>: <varValue>
+                    },
+                    ...
+                ]
+            }
+        }
+        */
+        if (stepType === "assign") {
+            let items = [];
+            if (step.assign) {
+                step.assign.forEach((item) => {
+                    Object.getOwnPropertyNames(item).forEach((propertyName) => {
+                        items.push({
+                            name: propertyName,
+                            value: item[propertyName]
+                        })
+                    });
+                })
+            }
+            return {
+                type: "assign",
+                stepName,
+                items: items
+            }
+        }
+
+        if (stepType === "switch") {
+            let items = [];
+            step.switch.forEach((item) => {
+                items.push({value: item.condition});
+            })
+            return {
+                type: "switch",
+                stepName,
+                items: items
+            }
         }
         return {};
     }
@@ -97,18 +146,91 @@ class Settings extends React.Component {
         //
         if (this.state.type === "call") {
             step["call"] = this.state.functionName;
-            step["result"] = this.state.result;
-            let args = {};
-            step["args"] = args;
+            if (this.state.result && this.state.result.length > 0) {
+                step["result"] = this.state.result;
+            }
+            if (this.state.items.length > 0) {
+                let args = {};
+                step["args"] = args;
+                this.state.items.forEach((item) => {
+                    args[item.name] = item.value;
+                });
+            }
+            return wf;
+        }
+
+        //
+        // Assign
+        //
+        if (this.state.type === "assign") {
+            step["assign"] = [];
             this.state.items.forEach((item) => {
-                args[item.name] = item.value;
+                step["assign"].push({ [item.name]: item.value })
             });
+            return wf;
+        }
+
+        //
+        // Switch
+        //
+        /*
+        {
+  <stepName>: {
+    "switch": [
+      {
+        "condition": "${EXPRESSION_A}",
+        "next": "STEP_NAME_B"
+      },
+      {
+        "condition": "${EXPRESSION_B}",
+        "next": "STEP_NAME_C"
+      }
+      ...
+    ],
+    "next": "STEP_NAME_D"
+  }
+}
+        */
+        if (this.state.type === "switch") {
+            step["switch"] = [];
+            this.state.items.forEach((item) => {
+                step["switch"].push({ condition: item.value});
+            });
+            return wf;
         }
         return wf;
     }
 
     _settingsChanged() {
+        console.log("Settings changed");
+        console.dir(this.toWF());
         this.props.onChange(this.toWF());
+    }
+
+    _callArgsChange(items) {
+        console.log("CallArgsChange");
+        this.setState({ items }, this._settingsChanged);
+    }
+
+    _assignArgsChange(items) {
+        this.setState({ items }, this._settingsChanged);
+    }
+
+    _switchArgsChange(items) {
+        this.setState({ items }, this._settingsChanged);
+    }
+
+    _typeChange(newType) {
+        // A new type means to clear all existing items.
+        const newValues = {
+            type: newType,
+            items: []
+        }
+
+        if (newType === "call") {
+            newValues.functionName = "";
+        }
+        this.setState(newValues, this._settingsChanged);
     }
 
     render() {
@@ -155,12 +277,20 @@ class Settings extends React.Component {
                                 }} />
                         </Grid>
                         <Grid item xs={12}>
-                            <NameValueList items={this.state.items} />
+                            <NameValueList items={this.state.items}
+                                onChange={this._callArgsChange.bind(this)} />
                         </Grid>
                     </Grid> : null}
                 {this.state.type === "assign" ?
-                    <div>Hi!! assign
-                        <NameValueList items={this.state.items} />
+                    <div>
+                        <NameValueList items={this.state.items}
+                            onChange={this._assignArgsChange.bind(this)} />
+                    </div> : null}
+                {this.state.type === "switch" ?
+                    <div>
+                        <NameValueList items={this.state.items}
+                            hideNames
+                            onChange={this._switchArgsChange.bind(this)} />
                     </div> : null}
 
             </div>);

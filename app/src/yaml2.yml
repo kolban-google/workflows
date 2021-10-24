@@ -1,0 +1,12 @@
+- Step1:
+    switch:
+      - condition: a
+        next: Step2
+      - condition: b
+        next: Step3
+- Step2:
+    call: None2021-10-24T19:07:54.511Z
+    next: end
+- Step3:
+    call: None2021-10-24T19:07:59.129Z
+    next: end

@@ -15,20 +15,19 @@ import PropTypes from 'prop-types';
 class SettingsDialog extends React.Component {
 
     constructor(props) {
-        console.log("Settings Dialog created!");
         // open: boolean
         // onOk: func
         // onCancel: func
         // wf: object
         super(props);
-        this.state = {wf: props.wf};
-    }
+        this.state = { wf: props.wf };
+    } // constructor
 
     componentDidUpdate(prevProps) {
         if (prevProps.wf !== this.props.wf) {
-            this.setState({wf: this.props.wf});
+            this.setState({ wf: this.props.wf });
         }
-    }
+    } // componentDidUpdate
 
     render() {
         return (
@@ -36,20 +35,27 @@ class SettingsDialog extends React.Component {
                 <DialogTitle>Step Settings</DialogTitle>
                 <DialogContent>
                     <Settings wf={this.props.wf} onChange={(wf) => {
-                        this.setState({wf: wf});
+                        this.setState({wf});
                     }} />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => {
-                        this.props.onOk(this.state.wf);
-                    }} color="primary">OK</Button>
+                    <Button
+                        onClick={() => {
+                            this.props.onOk(this.state.wf);
+                        }}
+                        color="primary" variant="contained">
+                        OK
+                    </Button>
+                    &nbsp;
                     <Button onClick={() => {
                         this.props.onCancel(this.wf);
-                    }} color="primary">Cancel</Button>
+                    }} color="primary" variant="contained">
+                        Cancel
+                    </Button>
                 </DialogActions>
             </Dialog>
         );
-    }
+    } // render
 }
 
 SettingsDialog.propTypes = {
