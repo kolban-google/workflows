@@ -31,11 +31,12 @@ class SettingsDialog extends React.Component {
 
     render() {
         return (
-            <Dialog open={this.props.open} fullWidth>
+            <Dialog open={this.props.open}  fullWidth
+            maxWidth="sm">
                 <DialogTitle>Step Settings</DialogTitle>
                 <DialogContent>
                     <Settings wf={this.props.wf} onChange={(wf) => {
-                        this.setState({wf});
+                        this.setState({ wf });
                     }} />
                 </DialogContent>
                 <DialogActions>

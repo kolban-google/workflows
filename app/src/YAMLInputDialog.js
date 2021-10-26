@@ -6,6 +6,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import TextField from '@material-ui/core/TextField';
 import PropTypes from 'prop-types';
+import MessageDialog from './MessageDialog.js';
 import yaml from 'js-yaml';
 
 /**
@@ -16,17 +17,32 @@ class YAMLInputDialog extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            yamlText: ""
+            yamlText: "",
+            messageDialogShow: false,
+            messageText: ""
         }
     } // constructor
 
     _onOk() {
-        const yamlObj = yaml.load(this.state.yamlText);
-        this.props.onOk(yamlObj);
+        try {
+            const yamlObj = yaml.load(this.state.yamlText);
+            this.props.onOk(yamlObj);
+        }
+        catch (e) {
+            console.dir(e);
+            this.setState({messageDialogShow: true, messageText: e.message})
+        }
     }// _onOk
+
+    _paste() {
+        navigator.clipboard.readText().then((clipText) => {
+            this.setState({ yamlText: clipText });
+        })
+    }
 
     render() {
         return (
+            <div>
             <Dialog open={this.props.open} fullWidth>
                 <DialogTitle>Load YAML</DialogTitle>
                 <DialogContent>
@@ -48,6 +64,12 @@ class YAMLInputDialog extends React.Component {
                 </DialogContent>
                 <DialogActions>
                     <Button
+                        onClick={this._paste.bind(this)}
+                        variant="contained"
+                        color="primary">Paste
+                    </Button>
+                    &nbsp;
+                    <Button
                         onClick={this._onOk.bind(this)}
                         variant="contained"
                         color="primary">OK
@@ -61,6 +83,8 @@ class YAMLInputDialog extends React.Component {
                         color="primary">Cancel</Button>
                 </DialogActions>
             </Dialog>
+            <MessageDialog open={this.state.messageDialogShow} message={this.state.messageText} title="YAML Parse Error" onClose={() => this.setState({messageDialogShow: false})}/>
+            </div>
         );
     } // render
 }

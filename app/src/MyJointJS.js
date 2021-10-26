@@ -7,14 +7,14 @@ import Dialog from '@material-ui/core/Dialog';
 import Input from '@material-ui/core/Input';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
-import Box from '@material-ui/core/Box';
 
+import Divider from '@material-ui/core/Divider';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import IconButton from '@material-ui/core/IconButton';
 import MenuIcon from '@material-ui/icons/Menu';
-
+import Grid from '@material-ui/core/Grid';
 import SettingsDialog from './SettingsDialog.js';
 import YAMLInputDialog from './YAMLInputDialog.js';
 import YAMLOutputDialog from './YAMLOutputDialog.js';
@@ -31,8 +31,9 @@ const WFShape_OutColor = "#daf2dc"
 const WFShape_CallIcon = '\uf0ac';
 const WFShape_AssignIcon = '\uf061';
 const WFShape_SwitchIcon = '\uf047';
-const WFShape_Width = 100;
-const WFShape_Height = 50;
+const WFShape_ReturnIcon = '\uf00c';
+const WFShape_Width = 140;
+const WFShape_Height = 70;
 const WFShape_RemoveDistance = -30;
 
 const WFShapeMap = {
@@ -45,6 +46,9 @@ const WFShapeMap = {
     "switch": {
         "icon": WFShape_SwitchIcon
     },
+    "return": {
+        "icon": WFShape_ReturnIcon
+    }
 }
 
 const portsDef = {
@@ -154,7 +158,7 @@ class MyJointJS extends React.Component {
         this.paper = new joint.dia.Paper({
             el: this.el,
             model: this.graph,
-            width: 900,
+            width: "100%",
             height: 600,
             gridSize: 1,
             background: {
@@ -212,31 +216,31 @@ class MyJointJS extends React.Component {
                     }
                 })
                 */
-/*
-        this.graph.on('add', function (cell) {
-            if (cell instanceof joint.dia.Link) {
-                var targetArrowheadTool = new joint.linkTools.TargetArrowhead();
-                var toolsView = new joint.dia.ToolsView({
-                  tools: [
-                    targetArrowheadTool
-                  ]
+        /*
+                this.graph.on('add', function (cell) {
+                    if (cell instanceof joint.dia.Link) {
+                        var targetArrowheadTool = new joint.linkTools.TargetArrowhead();
+                        var toolsView = new joint.dia.ToolsView({
+                          tools: [
+                            targetArrowheadTool
+                          ]
+                        });
+                        const linkView = cell.findView(this.paper);
+                        if (linkView == null) return; 
+                        linkView.addTools(toolsView);
+                    }
                 });
-                const linkView = cell.findView(this.paper);
-                if (linkView == null) return; 
-                linkView.addTools(toolsView);
-            }
-        });
-        */
+                */
 
-        this.paper.on('link:pointerup', function(linkView) {
+        this.paper.on('link:pointerup', function (linkView) {
             if (linkView.hasTools()) return;
-            linkView.addTools(new joint.dia.ToolsView({ tools: [new joint.linkTools.Remove({distance: WFShape_RemoveDistance})]}));
-          });
-          this.paper.on('link:mouseenter', function(linkView) {
+            linkView.addTools(new joint.dia.ToolsView({ tools: [new joint.linkTools.Remove({ distance: WFShape_RemoveDistance })] }));
+        });
+        this.paper.on('link:mouseenter', function (linkView) {
             linkView.showTools();
         });
-        
-        this.paper.on('link:mouseleave', function(linkView) {
+
+        this.paper.on('link:mouseleave', function (linkView) {
             linkView.hideTools();
         });
     } // componentDidMount
@@ -258,14 +262,13 @@ class MyJointJS extends React.Component {
                 text: stepName,
                 fill: 'black'
             },
-
         });
         rect.addPort({ group: 'in' });
         rect.addPort({ group: 'out' });
         rect.addTo(this.graph);
         rect.set('wf', {
             [stepName]: {
-                'call': "None" + new Date().toISOString()
+                'call': ''
             }
         });
 
@@ -282,7 +285,7 @@ class MyJointJS extends React.Component {
         });
 
         /*
-         * Add a handled for the settings menu on a double click.
+         * Add a handler for the settings menu on a double click.
          */
         this.paper.findViewByModel(rect).on('element:pointerdblclick', (e) => {
             this.setState({
@@ -303,6 +306,15 @@ class MyJointJS extends React.Component {
         this._menuClose();
     } // _deleteElement
 
+    _duplicateElement() {
+        const newElement = this._add();
+        //newElement.set('wf', clone(this.state.menuElement.get('wf')))
+        const newWf = clone(this.state.menuElement.get('wf'));
+        WFUtils.setStepName(newWf, "Copy_" + WFUtils.getStepName(newWf))
+        this._setElementFromWF(newElement, newWf);
+        this._menuClose();
+    } // _duplicateElement
+
     _setElementFromWF(jjsElement, wf) {
         let type = WFUtils.getStepType(wf);
         let originalWf = jjsElement.get('wf'); // Save the original WF value
@@ -315,7 +327,18 @@ class MyJointJS extends React.Component {
         // * Other than "switch" - A single output port of type "out"
         // * "switch" - As many output ports of type "out-condition" as there are conditions in the switch
         let originalType = WFUtils.getStepType(originalWf);
-        if (type === "switch" && originalType !== "switch") {
+        if (type !== "switch" && originalType === "switch") {
+            jjsElement.resize(WFShape_Width, WFShape_Height);
+        }
+        if (type === "return" && originalType !== "return") {
+            // Need to end up with no output ports of any type
+            let outPorts = jjsElement.getGroupPorts("out");
+            jjsElement.removePorts(outPorts);
+            outPorts = jjsElement.getGroupPorts("out-condition");
+            jjsElement.removePorts(outPorts);
+        } else if (type !== "return" && type !== "switch" && originalType === "return") {
+            jjsElement.addPort({ group: 'out' });
+        } else if (type === "switch" && originalType !== "switch") {
             // Delete all "out" ports and add condition ports
             const outPorts = jjsElement.getGroupPorts("out");
             jjsElement.removePorts(outPorts);
@@ -329,7 +352,6 @@ class MyJointJS extends React.Component {
             const outPorts = jjsElement.getGroupPorts("out-condition");
             jjsElement.removePorts(outPorts);
             jjsElement.addPort({ group: 'out' });
-            jjsElement.resize(WFShape_Width, WFShape_Height);
         } else if (type === "switch" && originalType === "switch") {
             // We need to check and see if new ports have been added or old ports removed
             const newConditions = WFUtils.getConditions(wf);
@@ -393,13 +415,13 @@ class MyJointJS extends React.Component {
             link.target(target);
             link.addTo(this.graph);
             const linkView = link.findView(this.paper);
-            linkView.addTools(new joint.dia.ToolsView({ tools: [new joint.linkTools.Remove({distance: WFShape_RemoveDistance})]}));
+            linkView.addTools(new joint.dia.ToolsView({ tools: [new joint.linkTools.Remove({ distance: WFShape_RemoveDistance })] }));
             linkView.hideTools();
         };
         this._deleteAll();
         // We create an element for each step in the YAML.
         yamlObj.forEach((wp) => {
-            let element = this._add();
+            const element = this._add();
             this._setElementFromWF(element, wp);
         });
         // Now all the elements are in place, we can start wiring them up!
@@ -505,7 +527,9 @@ class MyJointJS extends React.Component {
                     const nextStepName = WFUtils.getStepName(nextWF);
                     WFUtils.getStepContent(wf).next = nextStepName;
                 } else {
-                    WFUtils.getStepContent(wf).next = "end";
+                    if (stepType !== "return") {
+                        WFUtils.getStepContent(wf).next = "end";
+                    }
                 }
             } else {
                 // It IS a switch!!!  We now need to get all the conditions in the WF and see if they are linked!
@@ -552,8 +576,6 @@ class MyJointJS extends React.Component {
 
     render() {
         return (<div>
-
-
             <AppBar position="static">
                 <Toolbar>
                     <IconButton edge="start" color="inherit" onClick={(event) => {
@@ -566,8 +588,16 @@ class MyJointJS extends React.Component {
                     </Typography>
                 </Toolbar>
             </AppBar>
+            {/* This is the anchor element for the JointJS surface */}
             <div ref={el => this.el = el}></div>
-            <Box m={1}>
+
+            {/* Button at the bottom */}
+            <Grid container justifyContent="flex-end">
+
+
+
+                {
+                    /*
                 <Button color="primary" variant="contained" onClick={() => {
                     this.setState({ openLoad: true });
                 }}>Load</Button>
@@ -577,18 +607,13 @@ class MyJointJS extends React.Component {
                     console.log(JSON.stringify(this.graph.toJSON(), null, 2));
                 }}>Save</Button>
                 &nbsp;
-                <Button color="primary" variant="contained" onClick={() => { this._add() }}>Add</Button>
+                */
+                }
+                <Button color="primary" variant="contained" onClick={() => { this._add() }}>Add Step</Button>
                 &nbsp;
-                <Button color="primary" variant="contained" onClick={this._buildWF.bind(this)}>Build</Button>
+                <Button color="primary" variant="contained" onClick={this._buildWF.bind(this)}>Build YAML</Button>
                 &nbsp;
-                <Button color="primary" variant="contained" onClick={this._layout.bind(this)}>Layout</Button>
-                &nbsp;
-                <Button color="primary" variant="contained" onClick={
-                    () => {
-                        this.setState({ yamlInputShowDialog: true })
-                    }
-                }>YAML Input</Button>
-            </Box>
+            </Grid>
 
 
             {/* LOAD */}
@@ -622,6 +647,8 @@ class MyJointJS extends React.Component {
                     this.setState({ openSave: false });
                 }}>Close</Button>
             </Dialog>
+
+            {/* Context Menu from step */}
             <Menu
                 keepMounted
                 anchorReference='anchorPosition'
@@ -636,8 +663,11 @@ class MyJointJS extends React.Component {
                 }}>
                     Settings
                 </MenuItem>
+                <MenuItem onClick={() => this._duplicateElement()}>Duplicate</MenuItem>
                 <MenuItem onClick={() => this._deleteElement()}>Delete</MenuItem>
+                {/*
                 <MenuItem onClick={this._dumpElement.bind(this)}>Dump</MenuItem>
+                */}
             </Menu>
 
             {/* SETTINGS */}
@@ -682,9 +712,13 @@ class MyJointJS extends React.Component {
                     this.setState({ systemShowMenu: false });
                 }}
             >
-                <MenuItem >About...</MenuItem>
+                <MenuItem onClick={this._layout.bind(this)}>Layout</MenuItem>
+                <MenuItem onClick={() => {
+                    this.setState({ yamlInputShowDialog: true })
+                }}>Input YAML</MenuItem>
+                <Divider/>
+                <MenuItem>About...</MenuItem>
             </Menu>
-
         </div>);
     } // render
 }

@@ -3,9 +3,16 @@ import MenuItem from '@material-ui/core/MenuItem';
 import TextField from '@material-ui/core/TextField';
 import NameValueList from "./NameValueList.js"
 import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
 import WFUtils from './WFUtils.js'
 import PropTypes from 'prop-types';
 
+import Box from '@material-ui/core/Box';
+
+const WFShape_CallIcon = '\uf0ac';
+const WFShape_AssignIcon = '\uf061';
+const WFShape_SwitchIcon = '\uf047';
+const WFShape_ReturnIcon = '\uf00c';
 
 /**
  * <Settings wf=<Object>/>
@@ -23,7 +30,8 @@ class Settings extends React.Component {
     constructor(props) {
         super(props);
         if (props.wf) {
-            this.state = this.parseWF(props.wf);
+            this.state = this.parseWF(props.wf); // Set the state from the parse of the WF object
+            console.dir(this.state);
             delete this.parseFailed;
         } else {
             console.error("!Expected a wf object in Settings");
@@ -70,6 +78,7 @@ class Settings extends React.Component {
             // It is a call
             let functionName = step.call;
             let result = step.result ? step.result : "";
+
             let items = [];
             if (step.args) {
                 Object.getOwnPropertyNames(step.args).forEach((propertyName) => {
@@ -122,7 +131,7 @@ class Settings extends React.Component {
         if (stepType === "switch") {
             let items = [];
             step.switch.forEach((item) => {
-                items.push({value: item.condition});
+                items.push({ value: item.condition });
             })
             return {
                 type: "switch",
@@ -130,11 +139,20 @@ class Settings extends React.Component {
                 items: items
             }
         }
+
+        if (stepType === "return") {
+            let returnValue = step["return"] ? step["return"] : "";
+            return {
+                type: "return",
+                stepName,
+                "return": returnValue
+            }
+        }
         return {};
     }
 
     /**
-     * Retunr a WF object from the core information.
+     * Return a WF object from the core information.
      * @returns 
      */
     toWF() {
@@ -194,8 +212,13 @@ class Settings extends React.Component {
         if (this.state.type === "switch") {
             step["switch"] = [];
             this.state.items.forEach((item) => {
-                step["switch"].push({ condition: item.value});
+                step["switch"].push({ condition: item.value });
             });
+            return wf;
+        }
+
+        if (this.state.type === "return") {
+            step["return"] = this.state["return"];
             return wf;
         }
         return wf;
@@ -230,18 +253,30 @@ class Settings extends React.Component {
         if (newType === "call") {
             newValues.functionName = "";
         }
+        if (newType === "return") {
+            newValues["return"] = "";
+        }
         this.setState(newValues, this._settingsChanged);
-    }
+    } // _typeChange
 
     render() {
+        /*
         if (this.parseFailed) {
             return <div>PARSE FAILED</div>
         }
+        */
         return (
-            <div>
-                <Grid container spacing={3}>
+            <Box>
+
+                <Grid container spacing={2}>
                     <Grid item xs={6}>
-                        <TextField label='Step Name' value={this.state.stepName}
+                        <TextField label='Step Name' value={this.state.stepName} fullWidth
+                            inputProps={{
+                                spellCheck: 'false'
+                            }}
+                            variant="outlined"
+
+                            required
                             onChange={
                                 (e) => {
                                     this.setState({ stepName: e.target.value }, this._settingsChanged)
@@ -250,21 +285,34 @@ class Settings extends React.Component {
                         ></TextField>
                     </Grid>
                     <Grid item xs={6}>
-                        <TextField label="type" value={this.state.type} select onChange={
-                            (e) => {
-                                this._typeChange(e.target.value)
-                            }
-                        }>
-                            <MenuItem value={"call"}>Call</MenuItem>
-                            <MenuItem value={"assign"}>Assign</MenuItem>
-                            <MenuItem value={"switch"}>Switch</MenuItem>
+                        <TextField label="type" value={this.state.type}
+                            inputProps={{
+                                spellCheck: 'false'
+                            }}
+                            variant="outlined"
+                            select onChange={
+                                (e) => {
+                                    this._typeChange(e.target.value)
+                                }
+                            }>
+                            <MenuItem value={"call"}><Typography component="span" style={{ fontFamily: "fontawesome" }}>{WFShape_CallIcon}</Typography>&nbsp;Call</MenuItem>
+                            <MenuItem value={"assign"}><Typography component="span" style={{ fontFamily: "fontawesome" }}>{WFShape_AssignIcon}</Typography>&nbsp;Assign</MenuItem>
+                            <MenuItem value={"switch"}><Typography component="span" style={{ fontFamily: "fontawesome" }}>{WFShape_SwitchIcon}</Typography>&nbsp;Switch</MenuItem>
+                            <MenuItem value={"return"}><Typography component="span" style={{ fontFamily: "fontawesome" }}>{WFShape_ReturnIcon}</Typography>&nbsp;Return</MenuItem>
                         </TextField>
                     </Grid>
+
                 </Grid>
+
                 {this.state.type === "call" ?
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                         <Grid item xs={12}>
                             <TextField value={this.state.functionName} label="Function Name" fullWidth
+                                inputProps={{
+                                    spellCheck: 'false'
+                                }}
+                                variant="outlined"
+                                required
                                 onChange={(e) => {
                                     this.setState({ functionName: e.target.value }, this._settingsChanged);
                                 }}
@@ -272,6 +320,10 @@ class Settings extends React.Component {
                         </Grid>
                         <Grid item xs={12}>
                             <TextField value={this.state.result} label="Result" fullWidth
+                                inputProps={{
+                                    spellCheck: 'false'
+                                }}
+                                variant="outlined"
                                 onChange={(e) => {
                                     this.setState({ result: e.target.value }, this._settingsChanged);
                                 }} />
@@ -280,20 +332,42 @@ class Settings extends React.Component {
                             <NameValueList items={this.state.items}
                                 onChange={this._callArgsChange.bind(this)} />
                         </Grid>
-                    </Grid> : null}
+                    </Grid>
+                    : ""
+                }
                 {this.state.type === "assign" ?
-                    <div>
-                        <NameValueList items={this.state.items}
-                            onChange={this._assignArgsChange.bind(this)} />
-                    </div> : null}
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <NameValueList items={this.state.items}
+                                onChange={this._assignArgsChange.bind(this)} />
+                        </Grid>
+                    </Grid> : ""
+                }
                 {this.state.type === "switch" ?
-                    <div>
-                        <NameValueList items={this.state.items}
-                            hideNames
-                            onChange={this._switchArgsChange.bind(this)} />
-                    </div> : null}
-
-            </div>);
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <NameValueList items={this.state.items}
+                                hideNames
+                                onChange={this._switchArgsChange.bind(this)} />
+                        </Grid>
+                    </Grid> : ""
+                }
+                {this.state.type === "return" ?
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <TextField value={this.state["return"]} label="Return" fullWidth
+                                required
+                                inputProps={{
+                                    spellCheck: 'false'
+                                }}
+                                variant="outlined"
+                                onChange={(e) => {
+                                    this.setState({ "return": e.target.value }, this._settingsChanged);
+                                }} />
+                        </Grid>
+                    </Grid> : ""
+                }
+            </Box>);
     }
 }
 

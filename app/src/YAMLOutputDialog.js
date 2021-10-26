@@ -17,6 +17,10 @@ class YAMLOutputDialog extends React.Component {
         console.dir(props);
     } // constructor
 
+    _copy() {
+        navigator.clipboard.writeText(this.props.text);
+    }
+
     render() {
         return (
             <Dialog open={this.props.open} fullWidth>
@@ -29,11 +33,16 @@ class YAMLOutputDialog extends React.Component {
                         }}
                         fullWidth
                         multiline
-     
+
                         value={this.props.text}
                     />
                 </DialogContent>
                 <DialogActions>
+                    <Button
+                        onClick={this._copy.bind(this)}
+                        variant="contained"
+                        color="primary">Copy</Button>
+                    &nbsp;
                     <Button
                         onClick={this.props.onClose}
                         variant="contained"

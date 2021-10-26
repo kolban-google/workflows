@@ -3,6 +3,10 @@ import Button from '@material-ui/core/Button';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import TextField from '@material-ui/core/TextField';
+import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
+import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
+import DeleteIcon from '@material-ui/icons/Delete';
+import IconButton from '@material-ui/core/IconButton';
 import PropTypes from 'prop-types';
 
 /**
@@ -105,12 +109,32 @@ class NameValueList extends React.Component {
                     {this.state.items.map((item, index) => (
                         <ListItem key={index} dense>
                             {this.props.hideNames === false ? (
-                                <TextField label="name" value={item.name} onChange={(e) => this._nameChange(e, index)} />
+                                <TextField label="name"
+                                    required
+                                    inputProps={{
+                                        spellCheck: 'false'
+                                    }}
+                                    variant="outlined"
+                                    value={item.name} onChange={(e) => this._nameChange(e, index)} />
                             ) : ""}
-                            <TextField label="value" value={item.value} onChange={(e) => this._valueChange(e, index)} />
-                            <Button onClick={(e) => this._up(index)} disabled={index === 0}>Up</Button>
-                            <Button onClick={(e) => this._down(index)} disabled={index === (this.state.items.length - 1)}>Down</Button>
-                            <Button onClick={(e) => this._delete(index)}>Delete</Button>
+                            &nbsp;
+                            <TextField label="value"
+
+                                required
+                                inputProps={{
+                                    spellCheck: 'false'
+                                }}
+                                variant="outlined"
+                                value={item.value} onChange={(e) => this._valueChange(e, index)} />
+                            <IconButton onClick={(e) => this._up(index)} disabled={index === 0}>
+                                <ArrowUpwardIcon />
+                            </IconButton>
+                            <IconButton onClick={(e) => this._down(index)} disabled={index === (this.state.items.length - 1)} >
+                                <ArrowDownwardIcon />
+                            </IconButton>
+                            <IconButton onClick={(e) => this._delete(index)}>
+                                <DeleteIcon />
+                            </IconButton >
                         </ListItem>
                     ))}
                 </List>
