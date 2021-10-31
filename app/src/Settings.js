@@ -29,17 +29,54 @@ class Settings extends React.Component {
      */
     constructor(props) {
         super(props);
+        let state = {
+            valid: false
+        };
         if (props.wf) {
-            this.state = this.parseWF(props.wf); // Set the state from the parse of the WF object
+            state = this.parseWF(props.wf); // Set the state from the parse of the WF object
             console.dir(this.state);
             delete this.parseFailed;
         } else {
             console.error("!Expected a wf object in Settings");
             this.parseFailed = true;
         }
+        state._error_stepName = false;
+        this.state = state;
+        
     }
 
+    componentDidMount() {
+        this._validate()
+    }
 
+    _validate() {
+        let valid = true;
+        if (this.state.stepName.length === 0) {
+            this.setState({ _error_stepName: true, _error_message_stepName: 'Can not be empty' });
+            valid = false;
+        } else {
+            this.setState({ _error_stepName: false, _error_message_stepName: null });
+        }
+        if (this.state.type === "call") {
+            if (this.state.functionName.length === 0) {
+                this.setState({ _error_functionName: true, _error_message_functionName: 'Can not be empty' });
+                valid = false;
+            } else {
+                this.setState({ _error_functionName: false, _error_message_functionName: null });
+            }
+        } else if (this.state.type === "return") {
+            if (this.state["return"].length === 0) {
+                this.setState({ _error_return: true, _error_message_return: 'Can not be empty' });
+                valid = false;
+            } else {
+                this.setState({ _error_return: false, _error_message_return: null });
+            } 
+        }
+        this.setState({valid});
+        if (this.props.onValidate) {
+            this.props.onValidate(valid);
+        }
+    }
 
     /**
      * Parse a WF object and return the core information.
@@ -227,6 +264,7 @@ class Settings extends React.Component {
     _settingsChanged() {
         console.log("Settings changed");
         console.dir(this.toWF());
+        this._validate();
         this.props.onChange(this.toWF());
     }
 
@@ -275,7 +313,7 @@ class Settings extends React.Component {
                                 spellCheck: 'false'
                             }}
                             variant="outlined"
-
+                            error={this.state._error_stepName} helperText={this.state._error_message_stepName}
                             required
                             onChange={
                                 (e) => {
@@ -311,6 +349,7 @@ class Settings extends React.Component {
                                 inputProps={{
                                     spellCheck: 'false'
                                 }}
+                                error={this.state._error_functionName} helperText={this.state._error_message_functionName}
                                 variant="outlined"
                                 required
                                 onChange={(e) => {
@@ -357,6 +396,7 @@ class Settings extends React.Component {
                         <Grid item xs={12}>
                             <TextField value={this.state["return"]} label="Return" fullWidth
                                 required
+                                error={this.state._error_return} helperText={this.state._error_message_return}
                                 inputProps={{
                                     spellCheck: 'false'
                                 }}
