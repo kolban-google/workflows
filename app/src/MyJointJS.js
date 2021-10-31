@@ -21,6 +21,8 @@ import YAMLOutputDialog from './YAMLOutputDialog.js';
 import clone from 'just-clone';
 import yaml from 'js-yaml';
 import WFUtils from './WFUtils'
+import MessageDialog from './MessageDialog.js';
+import JointJSUtils from './JointJSUtils.js';
 
 
 // https://fontawesome.com/v4.7/icons/
@@ -144,11 +146,13 @@ class MyJointJS extends React.Component {
             yamlInputShowDialog: false,
             yamlOutputShowDialog: false,
             systemShowMenu: false,
+            aboutDialogOpen: false,
             yamlText: "",
             mouse: { x: 0, y: 0 },
             menuElement: null,
             anchorEl: null,
-            wf: {}
+            wf: {},
+            layoutDirection: "LR" // The layout of the graph ... LR for left->right or TB for top->bottom
         }
     }
 
@@ -186,7 +190,22 @@ class MyJointJS extends React.Component {
             validateConnection: function (cellViewS, magnetS, cellViewT, magnetT, end, linkView) {
                 if (cellViewS === cellViewT) return false; // Don't allow a link to start and end at the same element.
                 if (magnetT === undefined || magnetT.getAttribute('port-group') !== 'in') return false;  // If there is no target or the target is not an "in" port group, cancel it
-                if (!magnetS.getAttribute('port-group').startsWith('out')) return false
+                if (!magnetS.getAttribute('port-group').startsWith('out')) return false // If the source port group doesn't start with "out" then cancel it.
+                // We need to check that the source doesn't ALREADY have a link in the graph!
+                /*
+                console.log("Source:");
+                console.dir(cellViewS);
+                console.log("magnetS");
+                console.dir(magnetS)
+                console.log('linkView');
+                console.dir(linkView)
+                console.dir(linkView.model.source())
+                */
+                const source = linkView.model.source()
+                // Cound the number of outgoing links.  Hint ... it will be at least 1 as we have the CURRENT link
+                if (JointJSUtils.countOutgoingLinks(this.model, source.id, source.port) > 1) {
+                    return false;
+                }
                 return true;
             },
             interactive: function (cellView) {
@@ -243,7 +262,27 @@ class MyJointJS extends React.Component {
         this.paper.on('link:mouseleave', function (linkView) {
             linkView.hideTools();
         });
+
+        this._setLayoutDirection('LR'); // Set the default layout direction to be LR (Left->Right)
     } // componentDidMount
+
+    _setLayoutDirection(direction) {
+        if (direction === 'LR') {
+            portsDef.groups['in'].position = 'left';
+            portsDef.groups['out'].position = 'right';
+            portsDef.groups['out-condition'].position = 'right';
+
+        } else if (direction === 'TB') {
+            portsDef.groups['in'].position = 'top';
+            portsDef.groups['out'].position = 'bottom';
+            portsDef.groups['out-condition'].position = 'bottom';
+        } else {
+            throw new Error(`Unknown layoutDirection: ${direction}`)
+        }
+
+        this.setState({ layoutDirection: direction });
+    } // _setDirection
+
 
     _add() {
         let stepName = `Step${this.stepCount}`
@@ -395,6 +434,7 @@ class MyJointJS extends React.Component {
 
     _dumpElement() {
         console.dir(this.state.menuElement.get('wf'));
+        console.dir(this.state.menuElement);
     } // _dumpElement
 
 
@@ -562,12 +602,16 @@ class MyJointJS extends React.Component {
      * Layout the graph.
      */
     _layout() {
+        let rankDir = 'LR';
+        if (this.state.layoutDirection === 'TB') {
+            rankDir = 'TB';
+        }
         joint.layout.DirectedGraph.layout(this.graph, {
             dagre,
             graphlib,
             nodeSep: 50,
             edgeSep: 80,
-            rankDir: "LR",
+            rankDir,
             marginX: 50,
             marginY: 50
         });
@@ -665,9 +709,9 @@ class MyJointJS extends React.Component {
                 </MenuItem>
                 <MenuItem onClick={() => this._duplicateElement()}>Duplicate</MenuItem>
                 <MenuItem onClick={() => this._deleteElement()}>Delete</MenuItem>
-                {/*
+                
                 <MenuItem onClick={this._dumpElement.bind(this)}>Dump</MenuItem>
-                */}
+            
             </Menu>
 
             {/* SETTINGS */}
@@ -716,9 +760,26 @@ class MyJointJS extends React.Component {
                 <MenuItem onClick={() => {
                     this.setState({ yamlInputShowDialog: true })
                 }}>Input YAML</MenuItem>
-                <Divider/>
-                <MenuItem>About...</MenuItem>
+                <Divider />
+                <MenuItem onClick={() => this.setState({ aboutDialogOpen: true })}>About...</MenuItem>
             </Menu>
+
+
+
+            <MessageDialog
+                open={this.state.aboutDialogOpen}
+                message={
+                    <div>
+                        <p>Workflow editor</p>
+                        <p>Version: 2021-10-30</p>
+                        <p>Email: kolban@google.com</p>
+                    </div>
+                }
+                title="About ..."
+                onClose={() => this.setState({ aboutDialogOpen: false })}
+            />
+
+
         </div>);
     } // render
 }

@@ -17,4 +17,25 @@ function reLabelPort(element, portId, label) {
     const port = element.getPort(portId);
 }
 
-export default {reLabelPort, deleteLinkByPortID};
+
+/**
+ * Count the number of outgoing links that start at id/port
+ * @param {*} graph 
+ * @param {*} id 
+ * @param {*} port 
+ * @returns 
+ */
+function countOutgoingLinks(graph, id, port) {
+    console.assert(graph != null);
+    let count = 0;
+    const links = graph.getLinks();
+    links.forEach((currentLink) => {
+        const source = currentLink.source();
+        if (source.id === id && source.port === port) {
+            count++;
+        }
+    });
+    return count;
+} // countOutgoingLinks
+
+export default {reLabelPort, deleteLinkByPortID, countOutgoingLinks};

@@ -7,6 +7,14 @@ import DialogContent from '@material-ui/core/DialogContent';
 import PropTypes from 'prop-types';
 
 
+/**
+ * <MessageDialog
+ *   open
+ *   message
+ *   title
+ *   onClose
+ * />
+ */
 class MessageDialog extends React.Component {
 
     constructor(props) {
@@ -44,7 +52,10 @@ class MessageDialog extends React.Component {
 
 MessageDialog.propTypes = {
     open: PropTypes.bool.isRequired,
-    message: PropTypes.string.isRequired,
+    message: PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.object
+    ]),
     title: PropTypes.string.isRequired,
     onClose: PropTypes.func.isRequired,
 };

@@ -42,7 +42,7 @@ class Settings extends React.Component {
         }
         state._error_stepName = false;
         this.state = state;
-        
+
     }
 
     componentDidMount() {
@@ -70,9 +70,22 @@ class Settings extends React.Component {
                 valid = false;
             } else {
                 this.setState({ _error_return: false, _error_message_return: null });
-            } 
+            }
+        } else if (this.state.type === "switch") {
+            this.state.items.forEach((item, index) => {
+                if (item.value.length === 0) { // Cant' have an empty condition.
+                    valid = false;
+                    return;
+                }
+                this.state.items.forEach((item2, index2) => { // Can't have duplicate conditions.
+                    if (index !== index2 && item.value === item2.value) {
+                        valid = false;
+                        console.log(`Duplicate: ${item.value}`);
+                    }
+                });
+            });
         }
-        this.setState({valid});
+        this.setState({ valid });
         if (this.props.onValidate) {
             this.props.onValidate(valid);
         }
